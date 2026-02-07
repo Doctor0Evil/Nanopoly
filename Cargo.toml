@@ -1,0 +1,15 @@
+[package]
+name = "nanopoly"
+version = "0.1.0"
+edition = "2021"
+description = "Nanopoly XR lab-grid: nanoscale polygonal biophysical objects and nanoswarm control."
+license = "MIT"
+authors = ["Nanopoly XR Lab"]
+repository = "https://github.com/Doctor0Evil/Nanopoly"
+
+[lib]
+name = "nanopoly"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
