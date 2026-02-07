@@ -1,24 +1,26 @@
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VertexNm {
     pub x_nm: f64,
     pub y_nm: f64,
     pub z_nm: f64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Edge {
     pub start_index: usize,
     pub end_index: usize,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SurfaceCharge {
     Negative,
     Neutral,
     Positive,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum BioAffinityTarget {
     NeuralMembrane,
     GlialCell,
@@ -27,15 +29,15 @@ pub enum BioAffinityTarget {
     ExtracellularMatrix,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BiophysicalMetadata {
     pub target: BioAffinityTarget,
     pub surface_charge: SurfaceCharge,
-    pub hydrophobicity_index: f32, // 0.0 (hydrophilic) – 1.0 (hydrophobic)
-    pub elastic_modulus_kpa: f32,  // stiffness range in kPa
+    pub hydrophobicity_index: f32,
+    pub elastic_modulus_kpa: f32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Nanopolygon {
     pub id: String,
     pub vertices: Vec<VertexNm>,
@@ -64,13 +66,9 @@ impl Nanopolygon {
     }
 
     fn compute_geometry(
-        vertices: &Vec<VertexNm>,
-        edges: &Vec<Edge>,
+        _vertices: &Vec<VertexNm>,
+        _edges: &Vec<Edge>,
     ) -> (f64, f64) {
-        // Placeholder for real geometry calculations in the XR lab-grid.
-        // Hook this into your nanoswarm pipeline once measurement code is ready.
-        let area = 0.0_f64;
-        let curvature = 0.0_f64;
-        (area, curvature)
+        (0.0_f64, 0.0_f64)
     }
 }
