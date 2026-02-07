@@ -1,8 +1,8 @@
 #[derive(Clone, Debug)]
 pub struct ResponseMetric {
-    pub knowledge_factor_k: f32, // 0.0–1.0
-    pub demand_d: f32,           // 0.0–1.0 normalized host load
-    pub dracula_wave_dw: f32,    // 0.0–1.0 psych-compliance risk
+    pub knowledge_factor_k: f32,
+    pub demand_d: f32,
+    pub dracula_wave_dw: f32,
     pub notes: String,
 }
 
