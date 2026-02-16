@@ -1,0 +1,184 @@
+{
+  "$id": "https://bostrom.space/schemas/oral-telemetry-nexusSample.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Oral Telemetry Nexus Sample Schema",
+  "type": "object",
+  "required": ["version", "subjectdid", "samples"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "subjectdid": {
+      "type": "string",
+      "description": "DID of oral-telemetry host (e.g., Bostrom ID)."
+    },
+    "speciesProfile": {
+      "type": "string",
+      "enum": ["human_adult", "canine_adult", "other_mammal"],
+      "description": "Selects corridor parameters; logic stays species-neutral."
+    },
+    "deviceId": {
+      "type": "string",
+      "description": "Telemetry nexus hardware identifier."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "samples": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "toothId",
+          "voxelId",
+          "indices",
+          "polytopes",
+          "nanoState"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toothId": {
+            "type": "string",
+            "description": "Tooth identifier in FDI or numbered notation (e.g., 11, 36, C1)."
+          },
+          "voxelId": {
+            "type": "string",
+            "description": "Local 5D voxel identifier within the tooth/gum volume."
+          },
+          "region": {
+            "type": "string",
+            "enum": ["enamel", "dentin", "pulp", "ligament", "gum"]
+          },
+          "indices": {
+            "type": "object",
+            "required": ["TD", "MB", "F", "R", "E", "FI_voxel"],
+            "properties": {
+              "TD": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "ThermalDistanceIndex at voxel."
+              },
+              "MB": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "MolecularBalanceIndex at voxel."
+              },
+              "F": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "FatigueIndex at voxel."
+              },
+              "R": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Local risk score (caries/crack/recession)."
+              },
+              "E": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "EcoImpactScore for current materials/procedures."
+              },
+              "FI_voxel": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Computed voxel-level relief FI as per .oral-safety-polytope.aln."
+              }
+            }
+          },
+          "polytopes": {
+            "type": "object",
+            "description": "Admissibility flags for oral polytopes at this sample.",
+            "properties": {
+              "OralEnamelAdmissible": { "type": "boolean" },
+              "OralDentinAdmissible": { "type": "boolean" },
+              "OralPulpAdmissible": { "type": "boolean" },
+              "OralLigGumAdmissible": { "type": "boolean" }
+            },
+            "required": [
+              "OralEnamelAdmissible",
+              "OralDentinAdmissible",
+              "OralPulpAdmissible",
+              "OralLigGumAdmissible"
+            ]
+          },
+          "nanoState": {
+            "type": "object",
+            "description": "Local nanopolytope learning-capacitor state.",
+            "required": ["FI_region", "FI_floor", "K", "D", "DW"],
+            "properties": {
+              "FI_region": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Current FI for the enclosing tooth region."
+              },
+              "FI_floor": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Configured FI floor for this tooth-region."
+              },
+              "K": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Local knowledge/confidence metric."
+              },
+              "D": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Cumulative intervention dose vs host budget."
+              },
+              "DW": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Observed drift/wear metric."
+              }
+            }
+          },
+          "globalState": {
+            "type": "object",
+            "description": "Optional snapshot of outer safety scalars.",
+            "required": ["BCI", "RoH"],
+            "properties": {
+              "BCI": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Current Biocompatibility Index."
+              },
+              "RoH": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Current Risk of Harm scalar."
+              }
+            }
+          },
+          "oralSafetyVerdict": {
+            "type": "string",
+            "enum": ["AllowFullAction", "DegradePrecision", "PauseAndRest", "Block"],
+            "description": "Result of ActionAllowedOral for the associated plan, if any."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
