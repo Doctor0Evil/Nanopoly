@@ -1,0 +1,29 @@
+[[phase]]
+name = "Preparation"
+roh_band = "Calm"
+k_min = 0.92
+k_max = 0.96
+d_min = 0.20
+d_max = 0.30
+dw_min = 0.08
+dw_max = 0.12
+max_dw_soft = 0.15
+max_dw_hard = 0.20
+allowed_modes = ["FullExplore", "WarnMinimal"]
+max_decisions_per_interaction = 4
+max_message_chars = 1200
+
+[[phase]]
+name = "AcuteWithdrawal"
+roh_band = "Warning"
+k_min = 0.88
+k_max = 0.94
+d_min = 0.35
+d_max = 0.55
+dw_min = 0.14
+dw_max = 0.20
+max_dw_soft = 0.18
+max_dw_hard = 0.20
+allowed_modes = ["WarnMinimal", "HardStopExplain"]
+max_decisions_per_interaction = 2
+max_message_chars = 600
