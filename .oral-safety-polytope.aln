@@ -1,0 +1,239 @@
+aln_version: 1.0
+id: .oral-safety-polytope.aln
+ownerdid: did:bostrom:bostrom18sd2ujv24ual9c9pshtxys6j8knh6xaead9ye7
+
+1. Scope
+  description: >
+    Dental and oral-tissue safety polytopes and FI corridors for nanoswarm
+    and biomech integrations. Encodes 5D voxel-wise “relief” envelopes around
+    jaw, gums, and teeth, with constitutional ceilings BCI, RoH <= 0.30 and
+    local FI floors per tooth region. Applies to humans by default, with
+    species-adjusted corridors for canines and other mammals.
+
+2. Axes and indices
+  # Per-voxel indices (0–1, evidence-anchored, monotone with harm)
+  axes:
+    - name: ThermalDistanceIndex
+      symbol: TD
+      modality: oral_thermography, in-vitro enamel/dentin thermal tests
+      unit: "normalized (0 safe baseline, 1 chronic over/under-heat)"
+      rule: >
+        Map deviation of local enamel/dentin/pulp temperature from
+        37°C +/- corridor to TD in [0,1]; short spikes allowed, chronic
+        excursions or high gradients -> TD -> 1.0.
+      evidencerefs:
+        - DEFAULTBIOPHYSEVIDENCE.v1#oral_thermal
+    - name: MolecularBalanceIndex
+      symbol: MB
+      modality: salivary chemistry, plaque mineralization, pH
+      unit: "normalized (0 poor balance, 1 stable remineralization)"
+      rule: >
+        Map pH, Ca/P, biofilm mineralization, inflammatory markers into
+        MB in [0,1]; stable neutral pH, low inflammatory markers -> MB ~1.0,
+        chronic acidity or inflammation -> MB -> 0.0.
+      evidencerefs:
+        - DEFAULTBIOPHYSEVIDENCE.v1#oral_molecular
+    - name: FatigueIndex
+      symbol: F
+      modality: bite-load modeling, micro-fracture risk
+      unit: "normalized (0 low chronic fatigue, 1 high micro-fracture risk)"
+      rule: >
+        Compare cumulative occlusal load and contact pattern vs. enamel/
+        dentin fatigue limits; safe duty cycle -> F ~0.0, chronic overload
+        or bruxism bands -> F -> 1.0.
+      evidencerefs:
+        - DEFAULTBIOPHYSEVIDENCE.v1#oral_mechanical
+    - name: RiskScore
+      symbol: R
+      modality: caries / crack / recession risk models
+      unit: "normalized (0 negligible, 1 high near-term lesion risk)"
+      rule: >
+        Aggregate caries risk, crack initiation risk, periodontal recession
+        into R in [0,1]; conservative dentistry guidelines define redline.
+      evidencerefs:
+        - DEFAULTBIOPHYSEVIDENCE.v1#oral_risk
+    - name: EcoImpactScore
+      symbol: E
+      modality: CEIM + NanoKarma for oral materials and procedures
+      unit: "normalized (0 low eco-harm, 1 ecologically unacceptable)"
+      rule: >
+        Map material choice, procedure intensity, and waste flows into E;
+        low-impact, recyclable, non-toxic patterns -> E ~0.0; high toxin,
+        high-energy procedures -> E -> 1.0.
+      evidencerefs:
+        - CEIMModel.v1#oral_materials
+        - NanoKarmaSpec.v1#oral_channels
+
+3. Relief FI per voxel and per tooth region
+  # FI is a LifeforceIndex-style scalar in [0,1]; higher = safer, more relief.
+  fi_definition:
+    per_voxel:
+      inputs: [TD, MB, F, R, E]
+      # example conservative, failsafe form; weights may be refined via Errority
+      formula: |
+        # TD, F, R, E monotone with harm; MB monotone with health
+        # Convert to “safety contributions” then take minimum for failsafe.
+        s_TD = 1.0 - TD
+        s_F  = 1.0 - F
+        s_R  = 1.0 - R
+        s_E  = 1.0 - E
+        s_MB = MB
+        FI_voxel = min(s_TD, s_F, s_R, s_E, s_MB)
+      invariants:
+        - name: monotone-harm
+          statement: >
+            Any increase in TD, F, R, or E with all else fixed MUST NOT
+            increase FI_voxel.
+        - name: monotone-relief
+          statement: >
+            Any increase in MB with all else fixed MUST NOT decrease FI_voxel.
+    per_tooth_region:
+      aggregation: |
+        # For each tooth region (enamel, dentin, pulp, ligament, gum),
+        # FI_tooth_region = min over voxels in region (FI_voxel).
+        FI_region = min_v FI_voxel(v in region)
+      comfort_band:
+        soft_floor: 0.80   # preferred relief
+        hard_floor: 0.60   # minimum admissible FI for load increase
+      constitutional_ceiling:
+        bci_max: 0.30
+        roh_max: 0.30
+      rule: >
+        No nanoswarm or biomech controller MAY increase local mechanical
+        demand, chemical aggressiveness, or thermal cycling in a region
+        while (FI_region < hard_floor) OR (BCI >= 0.30) OR (RoH >= 0.30).
+
+4. Safety polytopes for oral domains
+  # Linear envelopes over stacked stressor vectors; tightening-only via Errority.
+  polytopes:
+    - name: Poral_enamel
+      domain: "enamel surface + subsurface voxels"
+      stressor_vector: [TD, F, R, E]
+      definition:
+        A: "A_enamel (rows: max TD, max F, max R, max E)"
+        b: "b_enamel (bounds: TD<=TD_max, etc.)"
+        predicate: "OralEnamelAdmissible(x) := A_enamel x <= b_enamel"
+    - name: Poral_dentin
+      domain: "dentin volume"
+      stressor_vector: [TD, F, R]
+      definition:
+        A: "A_dentin"
+        b: "b_dentin"
+        predicate: "OralDentinAdmissible(x) := A_dentin x <= b_dentin"
+    - name: Poral_pulp
+      domain: "pulp voxels"
+      stressor_vector: [TD, R]
+      definition:
+        A: "A_pulp"
+        b: "b_pulp"
+        predicate: "OralPulpAdmissible(x) := A_pulp x <= b_pulp"
+    - name: Poral_ligament_gum
+      domain: "periodontal ligament + gingiva voxels"
+      stressor_vector: [TD, F, R, E]
+      definition:
+        A: "A_plg"
+        b: "b_plg"
+        predicate: "OralLigGumAdmissible(x) := A_plg x <= b_plg"
+
+  tightening_rule:
+    name: envelope-tightening-only
+    statement: >
+      Errority events arising from oral domains (clinical harm, pain,
+      unexpected lesion, FI collapse inside predicted safe zone) MAY only:
+      (a) move rows of A_* outward (stricter constraints), (b) reduce b_*,
+      or (c) steepen hazard weights in DEFAULTBIOPHYSEVIDENCE; they MUST
+      NOT relax any bound or increase admissible load corridors.
+
+5. Per-tooth nanopolytope parameters
+  # This is the “learning capacitor” and fairness layer per tooth.
+  tooth_nanopolytope:
+    geometry:
+      surfaces: [enamel, dentin, pulp, ligament, gum]
+      fields_per_surface:
+        - FI_region
+        - TD_mean
+        - MB_mean
+        - F_mean
+        - R_mean
+        - E_mean
+        - K: "local knowledge / confidence metric in [0,1]"
+        - D: "cumulative intervention dose vs host budget in [0,1]"
+        - DW: "local wear / drift metric in [0,1]"
+    fairness:
+      fi_floor_per_region:
+        type: "per-tooth vector"
+        rule: >
+          Each tooth region r has FI_floor[r] in [0,1]. Nanoswarm schedulers
+          MUST NOT accept any action plan that reduces FI_region[r] below
+          FI_floor[r] to improve FI elsewhere or global utility.
+      predicate:
+        name: ToothReliefAdmissible
+        definition: |
+          ToothReliefAdmissible(tooth_region_state) :=
+            (FI_region >= FI_floor[tooth]) AND
+            (K >= K_min) AND
+            (D <= D_budget[tooth]) AND
+            (DW <= DW_max[tooth]) AND
+            OralEnamelAdmissible(x_enamel) AND
+            OralDentinAdmissible(x_dentin) AND
+            OralPulpAdmissible(x_pulp) AND
+            OralLigGumAdmissible(x_plg) AND
+            (BCI < 0.30) AND (RoH < 0.30)
+      learning_capacitor:
+        rule: >
+          While K is low OR D, DW are near their limits, controllers MUST
+          operate in “learning mode”: only FI-increasing, risk-decreasing,
+          and eco-improving actions are allowed (e.g., gentler cleaning,
+          lower duty). Step sizes and update frequency MUST be reduced until
+          FI_region and K stabilize over a configured window.
+
+6. Species abstraction and corridors
+  species_profiles:
+    - species: "human_adult"
+      corridors_ref: "DEFAULTBIOPHYSEVIDENCE.v1#oral_human"
+      note: "Default deployment profile; calibrated on human clinical data."
+    - species: "canine_adult"
+      corridors_ref: "DEFAULTBIOPHYSEVIDENCE.v1#oral_canine"
+      note: >
+        Uses same TD, MB, F, R, E axes and FI definition as humans; only
+        corridor parameters (TD_max, F_max, FI_floor, enamel thickness,
+        bite-load priors, microbiome priors) differ. No species labels are
+        used in control logic; only physical corridors change.
+    invariants:
+      - name: species-neutral-logic
+        statement: >
+          Controllers MUST implement the same FI, polytopes, and fairness
+          predicates for all mammals; species differences appear only as
+          parameter sets (corridors) in DEFAULTBIOPHYSEVIDENCE.
+
+7. Governance hooks
+  predicates:
+    - name: OralSafetyAdmissible
+      definition: |
+        OralSafetyAdmissible(plan) :=
+          (forall teeth, regions:
+            ToothReliefAdmissible(region_state_after(plan))) AND
+          (BCI_after <= 0.30) AND
+          (RoH_after <= 0.30)
+    - name: ActionAllowedOral
+      definition: |
+        ActionAllowedOral(plan) :=
+          BciAdmissible(state_after(plan)) AND
+          NeurorightsOk(plan) AND
+          OralSafetyAdmissible(plan)
+
+  audit:
+    channels:
+      - OralFI_timeseries
+      - OralPolytopeViolations
+      - DeniedOralPlans
+      - OralErrorityEvents
+    rule: >
+      Any observed oral harm while ActionAllowedOral == true MUST emit an
+      OralErrorityEvent, tighten Poral_* and/or FI rules, and may revoke or
+      downgrade the responsible module’s biomech-integration-policy shard.
+
+meta:
+  version: 1.0.0
+  createdAt: 2026-02-16T00:00:00Z
+  hexstamp: "0x6a91f3de42bc7e19"
